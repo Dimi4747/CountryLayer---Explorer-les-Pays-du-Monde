@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TP API CountryLayer - Explorer les Pays</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .api-config {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .api-status {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .api-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .api-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            font-size: 1rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            padding: 15px 20px;
+            background: #e9ecef;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .countries-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .country-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+             box-shadow: 0 2px 40px rgba(0, 0, 0, 0.);
+        }
+
+        .country-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .country-flag {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+
+        .country-info {
+            padding: 20px;
+        }
+
+        .country-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .country-details {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .country-detail {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .detail-icon {
+            margin-right: 8px;
+            color: #3498db;
+        }
+
+        .country-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .country-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .country-modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .modal-header {
+            padding: 30px;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .modal-flag {
+            width: 100px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+        }
+
+        .modal-body {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .info-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .info-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .filter-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .modal-body {
+                grid-template-columns: 1fr;
+            }
+            
+            .countries-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Explorer les Pays du Monde</h1>
+        </header>
+
+      
+
+        <div class="controls" id="controlsSection">
+            <div class="search-box">
+                <input type="text" class="api-input" id="searchInput" placeholder="Rechercher un pays...">
+            </div>
+            <div class="filter-group">
+                <select class="filter-select" id="regionFilter">
+                    <option value="">Toutes les régions</option>
+                </select>
+                <select class="filter-select" id="sortSelect">
+                    <option value="name">Trier par nom</option>
+                    <option value="population">Trier par population</option>
+                    <option value="area">Trier par superficie</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats" id="statsSection">
+            <div class="stat-item">
+                <span>🌍</span>
+                <span id="totalCountries">0 pays chargés</span>
+            </div>
+            <div class="stat-item">
+                <span>👥</span>
+                <span id="totalPopulation">0 habitants</span>
+            </div>
+            <div class="stat-item">
+                <span>📐</span>
+                <span id="totalArea">0 km²</span>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingSection">
+            <div class="spinner"></div>
+            <p>Chargement des données depuis l'API CountryLayer...</p>
+        </div>
+
+        <div class="error-message" id="errorSection" style="display: none;"></div>
+
+        <div class="countries-grid" id="countriesGrid"></div>
+    </div>
+
+    <div class="country-modal" id="countryModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-header">
+                <img src="" alt="" class="modal-flag" id="modalFlag">
+                <h2 class="modal-title" id="modalTitle">Pays</h2>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Les détails du pays seront injectés ici -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Classe principale pour gérer l'application CountryLayer
+        class CountryExplorer {
+            constructor() {
+                this.apiKey = '486edbc7f823b4ff9e246d4e475baa8e'; // Votre clé API
+                this.countries = [];
+                this.filteredCountries = [];
+                this.regions = new Set();
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadCountriesData(); // Chargement automatique
+            }
+            
+            initializeElements() {
+                // Éléments de contrôle
+                this.controlsSection = document.getElementById('controlsSection');
+                this.searchInput = document.getElementById('searchInput');
+                this.regionFilter = document.getElementById('regionFilter');
+                this.sortSelect = document.getElementById('sortSelect');
+                
+                // Éléments d'affichage
+                this.loadingSection = document.getElementById('loadingSection');
+                this.errorSection = document.getElementById('errorSection');
+                this.countriesGrid = document.getElementById('countriesGrid');
+                this.statsSection = document.getElementById('statsSection');
+                
+                // Éléments de statistiques
+                this.totalCountries = document.getElementById('totalCountries');
+                this.totalPopulation = document.getElementById('totalPopulation');
+                this.totalArea = document.getElementById('totalArea');
+                
+                // Modal
+                this.countryModal = document.getElementById('countryModal');
+                this.modalClose = document.getElementById('modalClose');
+                this.modalTitle = document.getElementById('modalTitle');
+                this.modalFlag = document.getElementById('modalFlag');
+                this.modalBody = document.getElementById('modalBody');
+            }
+            
+            setupEventListeners() {
+                // Recherche en temps réel
+                this.searchInput.addEventListener('input', () => this.filterCountries());
+                
+                // Filtres
+                this.regionFilter.addEventListener('change', () => this.filterCountries());
+                this.sortSelect.addEventListener('change', () => this.sortCountries());
+                
+                // Fermeture du modal
+                this.modalClose.addEventListener('click', () => this.closeModal());
+                this.countryModal.addEventListener('click', (e) => {
+                    if (e.target === this.countryModal) this.closeModal();
+                });
+                
+                // Touche Échap pour fermer le modal
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.closeModal();
+                });
+            }
+            
+            async loadCountriesData() {
+                this.showLoading();
+                this.hideError();
+                
+                try {
+                    // Appel réel à l'API CountryLayer
+                    const response = await fetch(`https://api.countrylayer.com/v2/all?access_key=${this.apiKey}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    this.countries = await response.json();
+                    
+                    // Traitement des données
+                    this.processCountriesData();
+                    this.updateStatistics();
+                    this.renderCountries();
+                    
+                } catch (error) {
+                    console.error('Erreur API:', error);
+                    this.showError(`Erreur lors du chargement des données: ${error.message}`);
+                    
+                    // Fallback: Chargement des données d'exemple en cas d'échec
+                    await this.loadFallbackData();
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            async loadFallbackData() {
+                try {
+                    // Données d'exemple en cas de problème avec l'API
+                    const fallbackData = [
+                        {
+                            name: "France",
+                            capital: "Paris",
+                            region: "Europe",
+                            population: 67391582,
+                            area: 551695,
+                            languages: [{ name: "French" }],
+                            currencies: [{ code: "EUR", name: "Euro" }],
+                            flag: "https://flagcdn.com/w320/fr.png",
+                            subregion: "Western Europe",
+                            timezones: ["UTC-10:00", "UTC-09:30", "UTC-09:00", "UTC-08:00", "UTC-04:00", "UTC-03:00", "UTC+01:00", "UTC+02:00", "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"],
+                            borders: ["AND", "BEL", "DEU", "ITA", "LUX", "MCO", "ESP", "CHE"]
+                        },
+                        {
+                            name: "United States",
+                            capital: "Washington, D.C.",
+                            region: "Americas",
+                            population: 329484123,
+                            area: 9372610,
+                            languages: [{ name: "English" }],
+                            currencies: [{ code: "USD", name: "United States dollar" }],
+                            flag: "https://flagcdn.com/w320/us.png",
+                            subregion: "Northern America",
+                            timezones: ["UTC-12:00", "UTC-11:00", "UTC-10:00", "UTC-09:00", "UTC-08:00", "UTC-07:00", "UTC-06:00", "UTC-05:00", "UTC-04:00", "UTC+10:00", "UTC+12:00"],
+                            borders: ["CAN", "MEX"]
+                        }
+                    ];
+                    
+                    this.countries = fallbackData;
+                    this.processCountriesData();
+                    this.updateStatistics();
+                    this.renderCountries();
+                    this.showError("Mode démo activé - Données d'exemple affichées");
+                    
+                } catch (fallbackError) {
+                    this.showError("Impossible de charger les données, même en mode démo");
+                }
+            }
+            
+            processCountriesData() {
+                // Nettoyer et préparer les données
+                this.countries = this.countries.map(country => ({
+                    ...country,
+                    population: country.population || 0,
+                    area: country.area || 0,
+                    capital: country.capital || 'Non spécifié',
+                    region: country.region || 'Non spécifié'
+                }));
+                
+                // Extraire les régions uniques
+                this.regions = new Set(this.countries.map(country => country.region).filter(region => region));
+                
+                // Mettre à jour le filtre des régions
+                this.updateRegionFilter();
+                
+                // Initialiser les pays filtrés
+                this.filteredCountries = [...this.countries];
+                
+                // Trier par défaut par nom
+                this.sortCountries();
+            }
+            
+            updateRegionFilter() {
+                // Vider les options existantes (garder l'option "Toutes les régions")
+                while (this.regionFilter.children.length > 1) {
+                    this.regionFilter.removeChild(this.regionFilter.lastChild);
+                }
+                
+                // Ajouter les régions triées
+                const sortedRegions = Array.from(this.regions).sort();
+                sortedRegions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region;
+                    option.textContent = region;
+                    this.regionFilter.appendChild(option);
+                });
+            }
+            
+            updateStatistics() {
+                const totalCountries = this.countries.length;
+                const totalPopulation = this.countries.reduce((sum, country) => sum + (country.population || 0), 0);
+                const totalArea = this.countries.reduce((sum, country) => sum + (country.area || 0), 0);
+                
+                this.totalCountries.textContent = `${this.formatNumber(totalCountries)} pays chargés`;
+                this.totalPopulation.textContent = `${this.formatNumber(totalPopulation)} habitants`;
+                this.totalArea.textContent = `${this.formatNumber(totalArea)} km²`;
+            }
+            
+            filterCountries() {
+                const searchTerm = this.searchInput.value.toLowerCase();
+                const selectedRegion = this.regionFilter.value;
+                
+                this.filteredCountries = this.countries.filter(country => {
+                    const matchesSearch = country.name.toLowerCase().includes(searchTerm);
+                    const matchesRegion = !selectedRegion || country.region === selectedRegion;
+                    
+                    return matchesSearch && matchesRegion;
+                });
+                
+                this.sortCountries();
+            }
+            
+            sortCountries() {
+                const sortBy = this.sortSelect.value;
+                
+                this.filteredCountries.sort((a, b) => {
+                    switch (sortBy) {
+                        case 'population':
+                            return (b.population || 0) - (a.population || 0);
+                        case 'area':
+                            return (b.area || 0) - (a.area || 0);
+                        case 'name':
+                        default:
+                            return a.name.localeCompare(b.name);
+                    }
+                });
+                
+                this.renderCountries();
+            }
+            
+            renderCountries() {
+                this.countriesGrid.innerHTML = '';
+                
+                if (this.filteredCountries.length === 0) {
+                    this.countriesGrid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                            <h3>🔍 Aucun pays trouvé</h3>
+                            <p>Essayez de modifier vos critères de recherche ou de filtre</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                this.filteredCountries.forEach(country => {
+                    const card = this.createCountryCard(country);
+                    this.countriesGrid.appendChild(card);
+                });
+            }
+            
+            createCountryCard(country) {
+                const card = document.createElement('div');
+                card.className = 'country-card';
+                card.addEventListener('click', () => this.showCountryDetails(country));
+                
+                // Gérer l'URL du drapeau (certaines APIs utilisent différents formats)
+                let flagUrl = country.flag;
+                if (!flagUrl && country.alpha2Code) {
+                    flagUrl = `https://flagcdn.com/w320/${country.alpha2Code.toLowerCase()}.png`;
+                }
+                
+                card.innerHTML = `
+                    <img src="${flagUrl || 'https://via.placeholder.com/320x160?text=Drapeau+non+disponible'}" 
+                         alt="Drapeau de ${country.name}" 
+                         class="country-flag"
+                         onerror="this.src='https://via.placeholder.com/320x160?text=Drapeau+non+disponible'">
+                    <div class="country-info">
+                        <h3 class="country-name">${country.name}</h3>
+                        <div class="country-details">
+                            <div class="country-detail">
+                                <span class="detail-icon">🏛️</span>
+                                <span>${country.capital}</span>
+                            </div>
+                            <div class="country-detail">
+                                <span class="detail-icon">🌍</span>
+                                <span>${country.region}</span>
+                            </div>
+                            <div class="country-detail">
+                                <span class="detail-icon">👥</span>
+                                <span>${this.formatNumber(country.population)} habitants</span>
+                            </div>
+                            <div class="country-detail">
+                                <span class="detail-icon">📐</span>
+                                <span>${this.formatNumber(country.area)} km²</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+            
+            showCountryDetails(country) {
+                this.modalTitle.textContent = country.name;
+                
+                // Gérer l'URL du drapeau pour le modal
+                let flagUrl = country.flag;
+                if (!flagUrl && country.alpha2Code) {
+                    flagUrl = `https://flagcdn.com/w320/${country.alpha2Code.toLowerCase()}.png`;
+                }
+                this.modalFlag.src = flagUrl || 'https://via.placeholder.com/100x60?text=Drapeau';
+                this.modalFlag.alt = `Drapeau de ${country.name}`;
+                
+                // Générer le contenu détaillé
+                this.modalBody.innerHTML = this.generateCountryDetails(country);
+                this.countryModal.classList.add('active');
+            }
+            
+            generateCountryDetails(country) {
+                return `
+                    <div class="info-section">
+                        <h3 class="info-title">Informations générales</h3>
+                        <div class="info-content">
+                            <p><strong>🏛️ Capitale:</strong> ${country.capital}</p>
+                            <p><strong>🌍 Région:</strong> ${country.region}</p>
+                            <p><strong>📍 Sous-région:</strong> ${country.subregion || 'Non spécifié'}</p>
+                            <p><strong>👥 Population:</strong> ${this.formatNumber(country.population)}</p>
+                            <p><strong>📐 Superficie:</strong> ${this.formatNumber(country.area)} km²</p>
+                            <p><strong>📊 Densité:</strong> ${country.population && country.area ? 
+                                this.formatNumber(Math.round(country.population / country.area)) + ' hab/km²' : 'N/A'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3 class="info-title">Données culturelles</h3>
+                        <div class="info-content">
+                            <p><strong>🗣️ Langues:</strong> ${country.languages ? 
+                                country.languages.map(lang => lang.name).join(', ') : 'Non spécifié'}</p>
+                            <p><strong>💰 Devises:</strong> ${country.currencies ? 
+                                country.currencies.map(curr => `${curr.name} (${curr.code || 'N/A'})`).join(', ') : 'Non spécifié'}</p>
+                            <p><strong>⏰ Fuseaux horaires:</strong> ${country.timezones ? 
+                                country.timezones.join(', ') : 'Non spécifié'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3 class="info-title">Informations géographiques</h3>
+                        <div class="info-content">
+                            <p><strong>🧭 Coordonnées:</strong> ${country.latlng ? 
+                                country.latlng.join(', ') : 'Non spécifié'}</p>
+                            <p><strong>🛂 Frontières:</strong> ${country.borders && country.borders.length > 0 ? 
+                                country.borders.join(', ') : 'Aucune'}</p>
+                            <p><strong>🌐 Code pays:</strong> ${country.alpha2Code || 'N/A'} / ${country.alpha3Code || 'N/A'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3 class="info-title">Système politique</h3>
+                        <div class="info-content">
+                            <p><strong>🏛️ Forme de gouvernement:</strong> ${country.demonym || 'Non spécifié'}</p>
+                            <p><strong>🇺🇳 Membre ONU:</strong> ${country.alpha3Code ? 'Oui' : 'Non spécifié'}</p>
+                            <p><strong>🎌 Appellation native:</strong> ${country.nativeName || 'Non spécifié'}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            closeModal() {
+                this.countryModal.classList.remove('active');
+            }
+            
+            formatNumber(num) {
+                if (!num || isNaN(num)) return 'N/A';
+                return new Intl.NumberFormat('fr-FR').format(num);
+            }
+            
+            showLoading() {
+                this.loadingSection.style.display = 'block';
+                this.controlsSection.style.display = 'none';
+                this.statsSection.style.display = 'none';
+                this.countriesGrid.innerHTML = '';
+            }
+            
+            hideLoading() {
+                this.loadingSection.style.display = 'none';
+                this.controlsSection.style.display = 'flex';
+                this.statsSection.style.display = 'flex';
+            }
+            
+            showError(message) {
+                this.errorSection.textContent = message;
+                this.errorSection.style.display = 'block';
+            }
+            
+            hideError() {
+                this.errorSection.style.display = 'none';
+            }
+        }
+        
+        // Initialiser l'application lorsque la page est chargée
+        document.addEventListener('DOMContentLoaded', () => {
+            new CountryExplorer();
+        });
+    </script>
+    
+</body>
+</html>
