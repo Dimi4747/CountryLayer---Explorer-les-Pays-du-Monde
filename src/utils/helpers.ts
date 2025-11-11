@@ -27,4 +27,19 @@ export class Helpers {
     
     return 'https://via.placeholder.com/320x160?text=Drapeau+non+disponible';
   }
+
+  static escapeHtml(unsafe: string): string {
+    if (!unsafe) return '';
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  static calculateDensity(population: number, area: number): string {
+    if (!population || !area || area === 0) return 'N/A';
+    return this.formatNumber(Math.round(population / area));
+  }
 }
