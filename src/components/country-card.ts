@@ -11,19 +11,19 @@ export class CountryCard {
 
     card.innerHTML = `
       <img src="${flagUrl}" 
-           alt="Drapeau de ${country.name}" 
+           alt="Drapeau de ${Helpers.escapeHtml(country.name)}" 
            class="country-flag"
            onerror="this.src='https://via.placeholder.com/320x160?text=Drapeau+non+disponible'">
       <div class="country-info">
-        <h3 class="country-name">${country.name}</h3>
+        <h3 class="country-name">${Helpers.escapeHtml(country.name)}</h3>
         <div class="country-details">
           <div class="country-detail">
             <span class="detail-icon">🏛️</span>
-            <span>${country.capital || 'Non spécifié'}</span>
+            <span>${Helpers.escapeHtml(country.capital)}</span>
           </div>
           <div class="country-detail">
             <span class="detail-icon">🌍</span>
-            <span>${country.region}</span>
+            <span>${Helpers.escapeHtml(country.region)}</span>
           </div>
           <div class="country-detail">
             <span class="detail-icon">👥</span>
